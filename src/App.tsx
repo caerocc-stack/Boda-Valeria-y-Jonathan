@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   GroupMember, 
   MenuType, 
@@ -66,6 +66,21 @@ export default function App() {
     const saved = localStorage.getItem('wedding_config_v2');
     return saved ? normalizeConfig(JSON.parse(saved)) : DEFAULT_CONFIG;
   });
+
+  // Estrellas doradas + brillos animados de fondo (posiciones fijas calculadas una vez)
+  const sparkles = useMemo(
+    () =>
+      Array.from({ length: 46 }, (_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+        size: 2 + Math.random() * 4,
+        delay: Math.random() * 6,
+        dur: 3 + Math.random() * 4,
+        isStar: Math.random() > 0.68
+      })),
+    []
+  );
 
   // Pantalla independiente "Ubicación / Cómo llegar" (fuera del wizard de pasos)
   const [showDirections, setShowDirections] = useState(false);
@@ -441,7 +456,41 @@ export default function App() {
 
   return (
     <div className="min-h-screen py-4 px-4 flex flex-col justify-between items-center relative paper-texture premium-stage selection:bg-gold/30 selection:text-charcoal">
-      
+
+      {/* Fondo animado: estrellas doradas + brillos */}
+      <div className="sparkles" aria-hidden="true">
+        {sparkles.map((s) =>
+          s.isStar ? (
+            <span
+              key={s.id}
+              className="sparkle-star"
+              style={{
+                left: `${s.left}%`,
+                top: `${s.top}%`,
+                fontSize: `${s.size * 4}px`,
+                ['--delay' as any]: `${s.delay}s`,
+                ['--dur' as any]: `${s.dur + 1}s`
+              }}
+            >
+              ✦
+            </span>
+          ) : (
+            <span
+              key={s.id}
+              className="sparkle-dot"
+              style={{
+                left: `${s.left}%`,
+                top: `${s.top}%`,
+                width: `${s.size}px`,
+                height: `${s.size}px`,
+                ['--delay' as any]: `${s.delay}s`,
+                ['--dur' as any]: `${s.dur}s`
+              }}
+            />
+          )
+        )}
+      </div>
+
       {/* Hidden canvases for rendering */}
       <canvas ref={cardCanvasRef} className="hidden" />
       <canvas ref={combinedCanvasRef} className="hidden" />

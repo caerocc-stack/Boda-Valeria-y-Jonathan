@@ -181,6 +181,49 @@ body {
   transform: translateY(0) scale(0.98);
 }
 
+/* ============================================================
+   FONDO ANIMADO — estrellas doradas + brillos
+   ============================================================ */
+.premium-stage > .sparkles {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Puntitos de brillo que titilan */
+.sparkle-dot {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #FBEFC8 0%, var(--color-gold) 70%, transparent 100%);
+  box-shadow: 0 0 6px 1px rgba(188, 163, 116, 0.65);
+  opacity: 0;
+  transform: scale(0.3);
+  animation: twinkle var(--dur, 4s) ease-in-out var(--delay, 0s) infinite;
+}
+
+/* Estrellas doradas (glifo ✦) que titilan y giran suavemente */
+.sparkle-star {
+  position: absolute;
+  color: #CBB079;
+  line-height: 1;
+  opacity: 0;
+  text-shadow: 0 0 8px rgba(188, 163, 116, 0.85), 0 0 2px rgba(255, 245, 210, 0.9);
+  animation: twinkleStar var(--dur, 5s) ease-in-out var(--delay, 0s) infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.3); }
+  50%      { opacity: 0.9; transform: scale(1); }
+}
+
+@keyframes twinkleStar {
+  0%   { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  50%  { opacity: 0.85; transform: scale(1) rotate(35deg); }
+  100% { opacity: 0; transform: scale(0.4) rotate(70deg); }
+}
+
 /* Respeto por usuarios que prefieren menos movimiento (accesibilidad) */
 @media (prefers-reduced-motion: reduce) {
   *,
