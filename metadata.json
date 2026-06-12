@@ -1,0 +1,6 @@
+{
+  "name": "Invitación de Boda - Valeria & Jonathan",
+  "description": "Invitación interactiva clásica y elegante con confirmación de asistencia, mapa y tarjetas personalizadas descargables.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,194 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", serif;
+  --font-script: "Great Vibes", cursive;
+  --font-sans: "Montserrat", sans-serif;
+
+  --color-gold: #BCA374;
+  --color-gold-deep: #967E56;
+  --color-sage: #7E8F75;
+  --color-rose: #BC9390;
+  --color-ivory: #FAF7F2;
+  --color-beige: #F5F1E9;
+  --color-charcoal: #1F1E1C;
+  --color-topo: #7A756C;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-ivory);
+  color: var(--color-charcoal);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-script-title {
+  font-family: var(--font-script), cursive;
+}
+
+.font-serif-elegant {
+  font-family: var(--font-serif), serif;
+}
+
+/* Accesibilidad: foco visible y elegante en cualquier control interactivo */
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   SCROLLBAR ELEGANTE
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-ivory);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-gold);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-deep);
+}
+
+/* ============================================================
+   TEXTURA DE PAPEL (fondo)
+   ============================================================ */
+.paper-texture {
+  background-color: #FAF7F2;
+  background-image:
+    radial-gradient(rgba(188, 163, 116, 0.05) 1px, transparent 0),
+    radial-gradient(rgba(188, 163, 116, 0.05) 1px, transparent 0);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+}
+
+/* Realce premium: leve viñeta dorada radial detrás de la tarjeta */
+.premium-stage::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(188, 163, 116, 0.10), transparent 60%),
+    radial-gradient(100% 60% at 50% 100%, rgba(126, 143, 117, 0.06), transparent 55%);
+  z-index: 0;
+}
+.premium-stage > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================================
+   ANIMACIONES  (las que faltaban en el original + premium)
+   ============================================================ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-down {
+  animation: fadeInDown 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14%      { transform: scale(1.18); }
+  28%      { transform: scale(1); }
+  42%      { transform: scale(1.14); }
+  56%      { transform: scale(1); }
+}
+.animate-heartbeat {
+  animation: heartbeat 1.6s ease-in-out infinite;
+}
+
+@keyframes bounceShort {
+  0%   { transform: translateY(16px); opacity: 0; }
+  60%  { transform: translateY(-4px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.animate-bounce-short {
+  animation: bounceShort 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Brillo dorado que recorre el título (microinteracción premium) */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.gold-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--color-gold-deep) 20%,
+    #E6D2A5 38%,
+    #FFF6DE 50%,
+    #E6D2A5 62%,
+    var(--color-gold-deep) 80%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer 6s linear infinite;
+}
+
+/* Aparición suave escalonada de la tarjeta principal */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(22px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-rise-in {
+  animation: riseIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Botón primario: micro-elevación + sombra dorada */
+.btn-premium {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease, background-color 0.25s ease;
+}
+.btn-premium:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -10px rgba(188, 163, 116, 0.7);
+}
+.btn-premium:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Respeto por usuarios que prefieren menos movimiento (accesibilidad) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,14 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+.vscode/
+.claude/
+assets/.aistudio/
+boda-demo.html
+_demo_serve/
+Formato Ver.png
