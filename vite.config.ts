@@ -7,6 +7,8 @@ import { defineConfig } from 'vite';
 // Render Static Site, Netlify, Vercel o abierto localmente, sin reconfigurar rutas.
 export default defineConfig({
   base: './',
+  // Tratar el audio .m4a como asset (devuelve una URL al importarlo)
+  assetsInclude: ['**/*.m4a'],
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
