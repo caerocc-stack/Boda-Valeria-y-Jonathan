@@ -122,14 +122,12 @@ export default function App() {
   // 'idle' | 'sending' | 'sent' | 'local' | 'error'
   const [rsvpStatus, setRsvpStatus] = useState<'idle' | 'sending' | 'sent' | 'local' | 'error'>('idle');
 
-  // Countdown State
-  const [countdown, setCountdown] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-    isOver: false
-  });
+  // Countdown State (evento) + Countdown límite de confirmación
+  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isOver: false });
+  const [deadlineCd, setDeadlineCd] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isOver: false });
+
+  // Paso 3: carga de invitados de a uno (índice del invitado actual)
+  const [guestIndex, setGuestIndex] = useState(0);
 
   // Canvas refs for drawing
   const cardCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -188,6 +186,32 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Cuenta regresiva al límite de confirmación: 22 de Junio de 2026 (fin del día, hora AR)
+  useEffect(() => {
+    const targetDate = new Date('2026-06-22T23:59:59-03:00').getTime();
+    const interval = setInterval(() => {
+      const difference = targetDate - new Date().getTime();
+      if (difference <= 0) {
+        setDeadlineCd({ days: 0, hours: 0, minutes: 0, seconds: 0, isOver: true });
+        clearInterval(interval);
+      } else {
+        setDeadlineCd({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((difference % (1000 * 60)) / 1000),
+          isOver: false
+        });
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Al entrar al paso 3, empezar siempre por el primer invitado
+  useEffect(() => {
+    if (state.step === 3) setGuestIndex(0);
+  }, [state.step]);
 
   // Synthesizer controllers
   const toggleMusic = () => {
@@ -282,19 +306,21 @@ export default function App() {
     }));
   };
 
-  // Paso 3: descarga FORZADA de la tarjeta de cada integrante y avanza al paso 4
-  const downloadAllAndContinue = async () => {
-    const anyEmpty = state.members.some(m => !m.name.trim());
-    if (anyEmpty) {
-      alert('Por favor, completá los nombres de todos los integrantes para continuar.');
+  // Paso 3: carga de a UNO. Descarga la tarjeta del invitado actual y pasa al siguiente
+  // (así evitamos el bloqueo de descargas múltiples simultáneas del navegador).
+  const confirmAndDownloadGuest = async () => {
+    const member = state.members[guestIndex];
+    if (!member || !member.name.trim()) {
+      alert('Por favor, escribí el nombre del invitado antes de continuar.');
       return;
     }
-    // Descargamos una por una, con una pequeña pausa para que el navegador no bloquee descargas múltiples
-    for (let i = 0; i < state.members.length; i++) {
-      await downloadIndividualCard(state.members[i], i);
-      await new Promise((r) => setTimeout(r, 600));
+    await downloadIndividualCard(member, guestIndex);
+    if (guestIndex < state.members.length - 1) {
+      setGuestIndex((i) => i + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      goToStep(4);
     }
-    goToStep(4);
   };
 
   // Paso 4: el invitado NO descarga nada. Confirma sus preferencias y se envían a los novios
@@ -393,6 +419,32 @@ export default function App() {
   const mapNavigationUrl = selectedMap === 'civil'
     ? "https://www.google.com/maps/search/?api=1&query=Campana+1780%2C+Ingeniero+Budge"
     : "https://www.google.com/maps/search/?api=1&query=Ant%C3%A1rtida+Argentina+602%2C+Lomas+de+Zamora";
+
+  // Caja de cuenta regresiva reutilizable (mismo formato en paso 2 y final)
+  type CD = { days: number; hours: number; minutes: number; seconds: number; isOver: boolean };
+  const renderCountdown = (cd: CD, label: string, accent: 'gold' | 'rose' = 'gold') => (
+    <div className={`p-4 bg-white border rounded-2xl space-y-3 shadow-sm mx-1 ${accent === 'rose' ? 'border-rose/40' : 'border-gold/30'}`}>
+      <div className={`text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-1.5 text-center ${accent === 'rose' ? 'text-rose' : 'text-gold'}`}>
+        <Clock className="w-3.5 h-3.5 shrink-0" />
+        <span>{label}</span>
+      </div>
+      <div className="grid grid-cols-4 gap-2 text-center">
+        {[
+          { v: cd.days, l: 'Días', pad: false },
+          { v: cd.hours, l: 'Horas', pad: true },
+          { v: cd.minutes, l: 'Min.', pad: true },
+          { v: cd.seconds, l: 'Seg.', pad: true }
+        ].map((item) => (
+          <div key={item.l} className="bg-[#FAF7F0] p-2 rounded-lg border border-gold/15">
+            <span className="block font-sans text-xl font-bold text-charcoal leading-none">
+              {item.pad ? String(item.v).padStart(2, '0') : item.v}
+            </span>
+            <span className="text-[8px] uppercase tracking-wider text-topo block mt-1">{item.l}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   // Bloque de mapas reutilizable (usado en el paso 5 y en la pantalla "Ubicación")
   // A COLOR (sin escala de grises) para que se vea bien en el celular.
@@ -500,7 +552,7 @@ export default function App() {
 
       {/* Elegant Classical Banner Area (se oculta en la pantalla final) */}
       {!finished && (
-        <header className="text-center max-w-lg mb-1 pt-0 cursor-pointer" onClick={handleTitleClick}>
+        <header className="content-layer text-center max-w-lg mb-1 pt-0 cursor-pointer" onClick={handleTitleClick}>
           <div className="inline-block relative leading-none">
             {/* Logo oficial V & J (sello redondo, grande, pegado al cuadro) */}
             <img
@@ -518,7 +570,7 @@ export default function App() {
       )}
 
       {/* Main Single Page Interaction Wizard Card */}
-      <main className="w-full max-w-md bg-ivory border border-gold/40 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[500px] border-b-[6px] border-b-gold animate-rise-in">
+      <main className="content-layer w-full max-w-md bg-ivory border border-gold/40 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[500px] border-b-[6px] border-b-gold animate-rise-in">
         
         {/* ===== Pantalla final (cierre del ciclo) ===== */}
         {finished && (
@@ -695,6 +747,12 @@ export default function App() {
                   </h2>
                 </div>
 
+                {/* Cuenta regresiva — fecha límite para confirmar */}
+                {renderCountdown(deadlineCd, 'Fecha límite para confirmar · 22 de Junio 2026', 'rose')}
+                <p className="text-[11px] italic text-topo text-center -mt-1">
+                  Te pedimos confirmar tu asistencia antes de esa fecha 💛
+                </p>
+
                 {/* Yes / No selectors */}
                 <div className="grid grid-cols-1 gap-3 pt-2">
                   <button
@@ -814,88 +872,98 @@ export default function App() {
             </div>
           )}
 
-          {/* STEP 3: INDIVIDUAL GUEST TICKETS LIST */}
-          {state.step === 3 && (
-            <div className="space-y-6 flex flex-col justify-between h-full animate-fade-in" id="step3_cards">
-              <div className="space-y-4">
-                <div className="text-center">
-                  <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-gold font-bold block">
-                    Generación de Tarjetas
-                  </span>
-                  <h2 className="font-serif-elegant text-2xl text-charcoal font-medium mt-1">
-                    {state.attending ? 'Nombres de los Invitados' : 'Tu Nombre'}
-                  </h2>
-                  <p className="text-xs text-topo mt-1">
-                    Escribí los nombres como te gustaría que figuren en las elegantes invitaciones grabadas.
-                  </p>
-                </div>
+          {/* STEP 3: CARGA DE INVITADOS DE A UNO */}
+          {state.step === 3 && (() => {
+            const total = state.members.length;
+            const current = state.members[guestIndex];
+            const isLast = guestIndex >= total - 1;
+            const doneCount = state.members.filter((m) => m.downloaded).length;
+            return (
+              <div className="space-y-5 flex flex-col justify-between h-full animate-fade-in" id="step3_cards">
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-gold font-bold block">
+                      Generación de Tarjetas
+                    </span>
+                    <h2 className="font-serif-elegant text-2xl text-charcoal font-medium mt-1">
+                      {state.attending ? `Invitado ${guestIndex + 1} de ${total}` : 'Tu Nombre'}
+                    </h2>
+                    <p className="text-xs text-topo mt-1 px-2">
+                      Escribí el nombre tal como querés que figure en la invitación. Al confirmar se
+                      descarga su tarjeta{state.attending && !isLast ? ' y cargás al siguiente' : ''}.
+                    </p>
+                  </div>
 
-                {/* Guest Names Inputs & download loops */}
-                <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
-                  {state.members.map((member, index) => (
-                    <div 
-                      key={member.id}
-                      className="p-3 bg-white border border-gold/20 rounded-xl space-y-2 relative"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-sans text-[10px] uppercase tracking-wider font-bold text-topo">
-                          {state.attending ? `Integrante ${index + 1}` : 'Tu Nombre'}
-                        </span>
-                        {member.downloaded && (
-                          <span className="text-[10px] font-bold text-sage flex items-center gap-1">
-                            <Check className="w-3 h-3" /> Descargada
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={member.name}
-                          onChange={(e) => handleMemberNameChange(member.id, e.target.value)}
-                          placeholder={index === 0 ? "Ej: Juan Pérez" : `Ej: Integrante ${index + 1}`}
-                          className="flex-1 px-3 py-2 text-sm bg-white border border-gold/30 rounded focus:outline-none focus:border-gold"
+                  {/* Progreso de pases (puntos) */}
+                  {state.attending && total > 1 && (
+                    <div className="flex items-center justify-center gap-1.5">
+                      {state.members.map((m, i) => (
+                        <div
+                          key={m.id}
+                          className={`h-1.5 rounded-full transition-all ${
+                            i === guestIndex ? 'w-5 bg-gold' : m.downloaded ? 'w-2 bg-sage' : 'w-2 bg-gold/20'
+                          }`}
                         />
-                        <button
-                          onClick={() => downloadIndividualCard(member, index)}
-                          disabled={!member.name.trim()}
-                          className="px-3 py-2 bg-gold/15 hover:bg-gold/30 disabled:opacity-50 text-gold rounded text-[10px] uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-1.5 border border-gold/20 shrink-0"
-                          title="Descargar Tarjeta de Invitación"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>Descargar</span>
-                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Input del invitado actual */}
+                  <div className="p-4 bg-white border border-gold/25 rounded-xl space-y-2 shadow-sm">
+                    <label className="font-sans text-[10px] uppercase tracking-wider font-bold text-topo block">
+                      {state.attending ? `Nombre del invitado ${guestIndex + 1}` : 'Tu nombre completo'}
+                    </label>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={current?.name || ''}
+                      onChange={(e) => current && handleMemberNameChange(current.id, e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') confirmAndDownloadGuest(); }}
+                      placeholder="Ej: Juan Pérez"
+                      className="w-full px-3 py-2.5 text-sm bg-white border border-gold/30 rounded-lg focus:outline-none focus:border-gold"
+                    />
+                  </div>
+
+                  {/* Invitados ya descargados */}
+                  {doneCount > 0 && (
+                    <div className="bg-sage/5 border border-sage/20 rounded-lg p-3 space-y-1.5">
+                      <span className="text-[10px] uppercase tracking-wider font-bold text-sage block">
+                        Invitaciones descargadas ({doneCount})
+                      </span>
+                      <div className="space-y-1">
+                        {state.members.filter((m) => m.downloaded).map((m) => (
+                          <div key={m.id} className="flex items-center gap-1.5 text-xs text-charcoal">
+                            <Check className="w-3 h-3 text-sage shrink-0" />
+                            <span className="truncate">{m.name}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
 
-                <div className="p-3 bg-sage/5 border border-sage/20 rounded-lg flex items-start gap-2 text-xs text-topo">
-                  <AlertCircle className="w-4 h-4 text-sage shrink-0 mt-0.5" />
-                  <p>Podés descargar {state.attending ? 'cada tarjeta' : 'tu tarjeta'} con el botón <strong className="text-gold">Descargar</strong>. Al tocar <strong className="text-gold">Descargar y continuar</strong> se {state.attending ? 'guardan automáticamente todas las invitaciones' : 'guarda automáticamente tu invitación'} y avanzás.</p>
+                {/* Navigation */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => goToStep(2)}
+                    className="flex-1 py-3 border border-gold/40 hover:bg-gold/10 text-topo rounded-xl text-xs uppercase tracking-wider font-semibold transition-all flex items-center justify-center gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span>Volver</span>
+                  </button>
+
+                  <button
+                    onClick={confirmAndDownloadGuest}
+                    disabled={!current?.name.trim()}
+                    className="btn-premium flex-1 py-3 bg-gold hover:bg-gold/90 disabled:opacity-50 text-charcoal rounded-xl text-xs uppercase tracking-wider font-bold shadow flex items-center justify-center gap-1.5"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>{state.attending && !isLast ? 'Descargar y siguiente' : 'Descargar y continuar'}</span>
+                  </button>
                 </div>
               </div>
-
-              {/* Navigation */}
-              <div className="flex gap-3 pt-6">
-                <button
-                  onClick={() => goToStep(2)}
-                  className="flex-1 py-3 border border-gold/40 hover:bg-gold/10 text-topo rounded-xl text-xs uppercase tracking-wider font-semibold transition-all flex items-center justify-center gap-1"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  <span>Volver</span>
-                </button>
-
-                <button
-                  onClick={downloadAllAndContinue}
-                  className="btn-premium flex-1 py-3 bg-gold hover:bg-gold/90 text-charcoal rounded-xl text-xs uppercase tracking-wider font-bold shadow flex items-center justify-center gap-1.5"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Descargar y continuar</span>
-                </button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* STEP 4: PREFERENCES & COMBINED CONFIRMATION */}
           {state.step === 4 && (
@@ -1174,42 +1242,7 @@ export default function App() {
                 </p>
 
                 {/* Countdown display */}
-                <div className="p-4 bg-white border border-gold/30 rounded-2xl space-y-3 shadow-sm mx-1">
-                  <div className="text-[10px] uppercase tracking-widest font-bold text-gold flex items-center justify-center gap-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Cuenta Regresiva al Civil</span>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-2 text-center">
-                    <div className="bg-[#FAF7F0] p-2 rounded-lg border border-gold/15">
-                      <span className="block font-sans text-xl font-bold text-charcoal leading-none">
-                        {countdown.days}
-                      </span>
-                      <span className="text-[8px] uppercase tracking-wider text-topo block mt-1">Días</span>
-                    </div>
-
-                    <div className="bg-[#FAF7F0] p-2 rounded-lg border border-gold/15">
-                      <span className="block font-sans text-xl font-bold text-charcoal leading-none">
-                        {String(countdown.hours).padStart(2, '0')}
-                      </span>
-                      <span className="text-[8px] uppercase tracking-wider text-topo block mt-1">Horas</span>
-                    </div>
-
-                    <div className="bg-[#FAF7F0] p-2 rounded-lg border border-gold/15">
-                      <span className="block font-sans text-xl font-bold text-charcoal leading-none">
-                        {String(countdown.minutes).padStart(2, '0')}
-                      </span>
-                      <span className="text-[8px] uppercase tracking-wider text-topo block mt-1">Min.</span>
-                    </div>
-
-                    <div className="bg-[#FAF7F0] p-2 rounded-lg border border-gold/15">
-                      <span className="block font-sans text-xl font-bold text-charcoal leading-none">
-                        {String(countdown.seconds).padStart(2, '0')}
-                      </span>
-                      <span className="text-[8px] uppercase tracking-wider text-topo block mt-1">Seg.</span>
-                    </div>
-                  </div>
-                </div>
+                {renderCountdown(countdown, 'Cuenta Regresiva al Civil', 'gold')}
 
                 <div className="h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent w-full" />
 
@@ -1246,18 +1279,18 @@ export default function App() {
         )}
       </main>
 
-      {/* Audio Play Consent Notification Popover on First Step */}
+      {/* Audio Play Consent Notification Popover on First Step (arriba y centrado para mejor visibilidad) */}
       {!audioPromptDismissed && state.step === 1 && (
-        <div className="fixed bottom-6 left-6 right-6 md:left-auto md:max-w-xs z-50 bg-[#FAF7F0] border-2 border-gold rounded-xl shadow-2xl p-4 animate-bounce-short">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm z-[60] bg-[#FAF7F0] border-2 border-gold rounded-xl shadow-2xl p-4 animate-fade-in-down">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Heart className="w-5 h-5 text-gold animate-pulse fill-gold/20" />
               <span className="font-sans text-xs uppercase tracking-wider font-bold text-charcoal">
-                Música Clásica de Bodas
+                Música de la Boda
               </span>
             </div>
             <p className="text-[11px] text-topo leading-relaxed">
-              ¿Deseas activar la melodía nupcial clásica sintetizada en vivo de fondo mientras completas tu confirmación?
+              ¿Querés activar la música de fondo mientras completás tu confirmación?
             </p>
             <div className="flex gap-2">
               <button
@@ -1328,7 +1361,7 @@ export default function App() {
       />
 
       {/* Elegant Classical Footer Margin details */}
-      <footer className="text-[10px] uppercase tracking-widest text-[#8A8175] mt-3 text-center select-none">
+      <footer className="content-layer text-[10px] uppercase tracking-widest text-[#8A8175] mt-3 text-center select-none">
         <span>Diseño Exclusivo • Boda Valeria & Jonathan</span>
       </footer>
 

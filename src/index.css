@@ -93,9 +93,11 @@ body {
     radial-gradient(100% 60% at 50% 100%, rgba(126, 143, 117, 0.06), transparent 55%);
   z-index: 0;
 }
-.premium-stage > * {
+/* El contenido principal se eleva sobre el fondo con .content-layer (no forzamos
+   position a TODOS los hijos para no romper los overlays con position: fixed). */
+.premium-stage > .content-layer {
   position: relative;
-  z-index: 1;
+  z-index: 10;
 }
 
 /* ============================================================

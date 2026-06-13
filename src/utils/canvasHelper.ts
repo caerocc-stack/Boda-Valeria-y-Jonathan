@@ -489,27 +489,7 @@ export function drawIndividualCardToCanvas(
     ctx.fillText('Viernes, 17 de Julio de 2026', logicalW / 2, qy + 42);
   }
 
-  // 9. Classical Bottom Signature Seals (Properly Inside Frame with Double Clarity)
-  const securitySeal = 'N° INVIT-17072026-' + String(100 + index).slice(1);
-  ctx.save();
-  ctx.textBaseline = 'middle';
-  
-  // Left: Ticket Number (Sharp high-clarity typography, perfectly separated from borders)
-  ctx.font = 'bold 9px Montserrat, sans-serif';
-  ctx.fillStyle = slateInk;
-  ctx.textAlign = 'left';
-  // Little highlight backdrop for 100% legibility
-  ctx.fillText(securitySeal, 48, logicalH - 43);
-
-  // Right: Dedicated copyright seal
-  ctx.font = '500 8.5px Montserrat, sans-serif';
-  ctx.fillStyle = mutedTaupe;
-  ctx.textAlign = 'right';
-  ctx.fillText('© VALERIA & JONA 2026', logicalW - 48, logicalH - 43);
-
-  // (El sello central de iniciales "V❦J" fue removido a pedido — no van iniciales en el centro)
-
-  ctx.restore();
+  // 9. Pie de tarjeta — limpio (a pedido se quitaron el N° de invitación y el © del pie)
 }
 
 // Carga segura de una imagen (foto de los novios) desde dataURL/URL
